@@ -172,13 +172,11 @@ while True:
 				if user not in broadcastdict:
 					print ('New scope of user: ', usershort)
 					broadcast_id = live_broadcast['id']
-					HLS_URL_2 = live_broadcast['image_url'][31:]
+					HLS_URL_2 = live_broadcast['image_url'][live_broadcast['image_url'].find('.tv/')+ 4:]
 					if 'chunk' in HLS_URL_2:
-						chunkpos = HLS_URL_2.find('chunk') - 1
-						HLS_URL_2 = HLS_URL_2[:chunkpos]
+						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('chunk') - 1]
 					if 'orig.jpg' in HLS_URL_2:
-						chunkpos = HLS_URL_2.find('orig.jpg') - 1
-						HLS_URL_2 = HLS_URL_2[:chunkpos]
+						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('orig.jpg') - 1]
 					broadcastdict[user] = {}
 					broadcastdict[user]['broadcast_id'] = broadcast_id
 					broadcastdict[user]['HLS_URL2']= HLS_URL_2
