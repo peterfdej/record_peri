@@ -41,7 +41,7 @@ import subprocess
 import json
 import urllib.request, urllib.error
 
-PERISCOPE_URL = 'https://www.periscope.tv/'
+PERISCOPE_URL = 'https://www.pscp.tv/'
 TWITTER_URL = 'https://twitter.com/'
 HLSURL1 = {
 	'https://prod-video-eu-central-1.pscp.tv/':'/live/eu-central-1/playlist.m3u8',
@@ -99,8 +99,8 @@ def get_twitter_streamURL(user):
 		r = response.read()
 		soup = BeautifulSoup(r, 'html.parser')
 		stream_container = str(soup.find(id="stream-items-id"))
-		if not stream_container.find('https://www.periscope.tv/w/') == -1:
-			streamURL = (stream_container[stream_container.find('https://www.periscope.tv/w/')+25:])
+		if not stream_container.find('https://www.pscp.tv/w/') == -1:
+			streamURL = (stream_container[stream_container.find('https://www.pscp.tv/w/')+20:])
 			streamURL = (streamURL[:streamURL.find('" ')])
 		else:
 			#no streams or recorded streams
