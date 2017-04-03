@@ -57,6 +57,11 @@ deleteuser = []
 p = {}
 p1 = {}
 
+if os.name == 'nt':
+	FFMPEG = 'ffmpeg.exe'
+else:
+	FFMPEG = 'ffmpeg'
+	
 def file_size(fname):
         statinfo = os.stat(fname)
         return statinfo.st_size
@@ -116,14 +121,14 @@ def get_twitter_streamURL(user):
 	return streamURL
 	
 def rec_ffmpeg(user, input, output):
-	command = ['ffmpeg.exe','-i' , input,'-y','-acodec','mp3','-loglevel','0', output]
+	command = [FFMPEG,'-i' , input,'-y','-acodec','mp3','-loglevel','0', output]
 	p[user]=subprocess.Popen(command)
 	broadcastdict[user]['recording'] = 1
 	time.sleep(1)
 	
 def convert2mp4(input):
 	output = input.replace('.mkv','.mp4')
-	command = ['ffmpeg.exe','-i' , input,'-y','-loglevel','0', output]
+	command = [FFMPEG,'-i' , input,'-y','-loglevel','0', output]
 	p1[user]=subprocess.Popen(command)
 
 while True:
