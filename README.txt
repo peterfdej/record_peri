@@ -13,4 +13,6 @@ p = Periscope account name
 t = Twitter account name
 
 Because ffmpeg can't stop decent with a script, the mkv isn't closed correctly.
-At the end the mkv is converted to a good working mp4 file.
+At the end the mkv is converted to a good working mp4 file (parm).
+Usage: 	python record_peri.py (non converting to mp4)
+			python record_peri.py -c (Recordings will be converted to mp4 after ending broadcast)

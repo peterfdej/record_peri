@@ -33,6 +33,9 @@
 #
 # Requirements:	- Python 3
 #				- ffmpeg
+#
+# Usage: 	python record_peri.py (non converting to mp4)
+#			python record_peri.py -c (Recordings will be converted to mp4 after ending broadcast)
 
 from bs4 import BeautifulSoup
 import sys, time, os, getopt, csv
@@ -56,6 +59,14 @@ broadcastdict = {}
 deleteuser = []
 p = {}
 p1 = {}
+convertmp4 = 0
+
+args = sys.argv[1:]
+if len(args):
+	CW = args[0]
+	if CW == '-c':
+		convertmp4 = 1
+		print ("Recordings will be converted to mp4 after ending broadcast.")
 
 if os.name == 'nt':
 	FFMPEG = 'ffmpeg.exe'
@@ -127,10 +138,11 @@ def rec_ffmpeg(user, input, output):
 	time.sleep(1)
 	
 def convert2mp4(input):
-	output = input.replace('.mkv','.mp4')
-	command = [FFMPEG,'-i' , input,'-y','-loglevel','0', output]
-	p1[user]=subprocess.Popen(command)
-
+	if convertmp4 == 1:
+		output = input.replace('.mkv','.mp4')
+		command = [FFMPEG,'-i' , input,'-y','-loglevel','0', output]
+		p1[user]=subprocess.Popen(command)
+	
 while True:
 	#read users.csv into list every loop, so you can edit csv file during run.
 	print ('*--------------------------------------------------------------*')
