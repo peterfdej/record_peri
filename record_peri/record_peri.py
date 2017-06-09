@@ -53,7 +53,14 @@ HLSURL1 = {
 	'https://prod-video-ap-southeast-1.pscp.tv/':'/live/ap-southeast-1/playlist.m3u8',
 	'https://prod-video-us-west-1.pscp.tv/':'/live/us-west-1/playlist.m3u8',
 	'https://prod-video-us-east-1.pscp.tv/':'/live/us-east-1/playlist.m3u8',
-	'https://prod-video-sa-east-1.pscp.tv/':'/live/sa-east-1/playlist.m3u8'
+	'https://prod-video-sa-east-1.pscp.tv/':'/live/sa-east-1/playlist.m3u8',
+	'https://prod-video-eu-central-2.pscp.tv/':'/live/eu-central-2/playlist.m3u8',
+	'https://prod-video-eu-west-2.pscp.tv/':'/live/eu-west-2/playlist.m3u8',
+	'https://prod-video-ap-northeast-2.pscp.tv/':'/live/ap-northeast-2/playlist.m3u8',
+	'https://prod-video-ap-southeast-2.pscp.tv/':'/live/ap-southeast-2/playlist.m3u8',
+	'https://prod-video-us-west-2.pscp.tv/':'/live/us-west-2/playlist.m3u8',
+	'https://prod-video-us-east-2.pscp.tv/':'/live/us-east-2/playlist.m3u8',
+	'https://prod-video-sa-east-2.pscp.tv/':'/live/sa-east-2/playlist.m3u8'
 	}
 broadcastdict = {}
 deleteuser = []
