@@ -52,6 +52,7 @@ HLSURL1 = {
 	'https://prod-video-ap-northeast-1.pscp.tv/':'/live/ap-northeast-1/playlist.m3u8',
 	'https://prod-video-ap-southeast-1.pscp.tv/':'/live/ap-southeast-1/playlist.m3u8',
 	'https://prod-video-us-west-1.pscp.tv/':'/live/us-west-1/playlist.m3u8',
+	'https://prod-video-us-east-1.pscp.tv/':'/live/us-east-1/hlsproducer.m3u8',
 	'https://prod-video-us-east-1.pscp.tv/':'/live/us-east-1/playlist.m3u8',
 	'https://prod-video-sa-east-1.pscp.tv/':'/live/sa-east-1/playlist.m3u8',
 	'https://prod-video-eu-central-2.pscp.tv/':'/live/eu-central-2/playlist.m3u8',
@@ -138,17 +139,17 @@ def get_twitter_streamURL(user):
 			streamURL = 'nothing'
 	return streamURL
 	
-def rec_ffmpeg(user, input, output):
+def rec_ffmpeg(broadcast_id, input, output):
 	command = [FFMPEG,'-i' , input,'-y','-acodec','mp3','-loglevel','0', output]
-	p[user]=subprocess.Popen(command)
-	broadcastdict[user]['recording'] = 1
+	p[broadcast_id]=subprocess.Popen(command)
+	broadcastdict[broadcast_id]['recording'] = 1
 	time.sleep(1)
 	
-def convert2mp4(input):
+def convert2mp4(broadcast_id, input):
 	if convertmp4 == 1:
 		output = input.replace('.mkv','.mp4')
 		command = [FFMPEG,'-i' , input,'-y','-loglevel','0', output]
-		p1[user]=subprocess.Popen(command)
+		p1[broadcast_id]=subprocess.Popen(command)
 	
 while True:
 	#read users.csv into list every loop, so you can edit csv file during run.
@@ -193,70 +194,75 @@ while True:
 				#skip user loop
 				print ('HTTP request error. Skip user: ', usershort)
 			else:
-				if user not in broadcastdict:
+				broadcast_id = live_broadcast['id']
+				if broadcast_id not in broadcastdict :
 					print ('New scope of user: ', usershort)
-					broadcast_id = live_broadcast['id']
 					HLS_URL_2 = live_broadcast['image_url'][live_broadcast['image_url'].find('.tv/')+ 4:]
 					if 'chunk' in HLS_URL_2:
 						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('chunk') - 1]
 					if 'orig.jpg' in HLS_URL_2:
 						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('orig.jpg') - 1]
-					broadcastdict[user] = {}
-					broadcastdict[user]['broadcast_id'] = broadcast_id
-					broadcastdict[user]['HLS_URL2']= HLS_URL_2
-					broadcastdict[user]['state']= 'RUNNING'
-					broadcastdict[user]['time']= time.time()
-					broadcastdict[user]['filename']= usershort + '_on_peri_' + str(broadcastdict[user]['time'])[:10] + '.mkv'
-					broadcastdict[user]['filesize']= 0
-					broadcastdict[user]['lastfilesize']= 0
-					broadcastdict[user]['recording']= 0
+					broadcastdict[broadcast_id] = {}
+					broadcastdict[broadcast_id]['user'] = usershort
+					broadcastdict[broadcast_id]['HLS_URL2']= HLS_URL_2
+					broadcastdict[broadcast_id]['state']= 'RUNNING'
+					broadcastdict[broadcast_id]['time']= time.time()
+					broadcastdict[broadcast_id]['filename']= usershort + '_on_peri_' + str(broadcastdict[broadcast_id]['time'])[:10] + '.mkv'
+					broadcastdict[broadcast_id]['filesize']= 0
+					broadcastdict[broadcast_id]['lastfilesize']= 0
+					broadcastdict[broadcast_id]['recording']= 0
 
 					print ('Start recording for: ', usershort)
-					for key in HLSURL1:
-						URL = key + broadcastdict[user]['HLS_URL2'] + HLSURL1[key]
-						rec_ffmpeg(user, URL, broadcastdict[user]['filename'] )
-						time.sleep(1)
-						if os.path.exists(broadcastdict[user]['filename']):
-							print ('Recording started from: ', key)
-							broadcastdict[user]['HLS_URL'] = URL
+					breaker = False
+					for counter in range(1,2):
+						for key in HLSURL1:
+							URL = key + broadcastdict[broadcast_id]['HLS_URL2'] + HLSURL1[key]
+							rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
+							time.sleep(1)
+							if os.path.exists(broadcastdict[broadcast_id]['filename']):
+								print ('Recording started from: ', key, '-', broadcast_id)
+								broadcastdict[broadcast_id]['HLS_URL'] = URL
+								breaker = True
+								break
+							else:
+								p[broadcast_id].terminate()
+						if breaker:
 							break
-						else:
-							p[user].terminate()
-					if not os.path.exists(broadcastdict[user]['filename']):
-						print ('No recording file created for: ', usershort, 'file: ', broadcastdict[user]['filename'])
-						deleteuserbroadcast.append(user)
-	for user in broadcastdict:
-		usershort = user[:-2]
+						time.sleep(5)
+					if not os.path.exists(broadcastdict[broadcast_id]['filename']):
+						print ('No recording file created for: ', usershort, 'file: ', broadcastdict[broadcast_id]['filename'])
+						deleteuserbroadcast.append(broadcast_id)
+	for broadcast_id in broadcastdict:
 		#check recording file
-		if os.path.exists(broadcastdict[user]['filename']) and broadcastdict[user]['state'] == 'RUNNING':
-			if broadcastdict[user]['filesize'] < file_size(broadcastdict[user]['filename']):
-				broadcastdict[user]['filesize'] = file_size(broadcastdict[user]['filename'])
-				print ('Running ',round(time.time()- broadcastdict[user]['time']), 'seconds: ', broadcastdict[user]['filename'])
-			elif file_size(broadcastdict[user]['filename']) < 307200 or file_size(broadcastdict[user]['filename']) == broadcastdict[user]['lastfilesize']:
+		if os.path.exists(broadcastdict[broadcast_id]['filename']) and broadcastdict[broadcast_id]['state'] == 'RUNNING':
+			if broadcastdict[broadcast_id]['filesize'] < file_size(broadcastdict[broadcast_id]['filename']):
+				broadcastdict[broadcast_id]['filesize'] = file_size(broadcastdict[broadcast_id]['filename'])
+				print ('Running ',round(time.time()- broadcastdict[broadcast_id]['time']), 'seconds: ', broadcastdict[broadcast_id]['filename'])
+			elif file_size(broadcastdict[broadcast_id]['filename']) < 307200 or file_size(broadcastdict[broadcast_id]['filename']) == broadcastdict[broadcast_id]['lastfilesize']:
 				#final stop recording when file < 300kB
-				p[user].terminate()
+				p[broadcast_id].terminate()
 				time.sleep(2)
-				broadcastdict[user]['state'] = 'ENDED'
-				deleteuserbroadcast.append(user)
-				os.remove(broadcastdict[user]['filename'])
-				print ('Delete: ', broadcastdict[user]['filename'])
+				broadcastdict[broadcast_id]['state'] = 'ENDED'
+				deleteuserbroadcast.append(broadcast_id)
+				os.remove(broadcastdict[broadcast_id]['filename'])
+				print ('Delete: ', broadcastdict[broadcast_id]['filename'])
 			else:
 				#ffmpeg is not recording anymore.
-				broadcastdict[user]['lastfilesize'] = file_size(broadcastdict[user]['filename'])
-				print ('Restart recording for: ', broadcastdict[user]['filename'] , ' :stream / record error')
-				p[user].terminate()
-				convert2mp4(broadcastdict[user]['filename'])
+				broadcastdict[broadcast_id]['lastfilesize'] = file_size(broadcastdict[broadcast_id]['filename'])
+				print ('Restart recording for: ', broadcastdict[broadcast_id]['filename'] , ' :stream / record error')
+				p[broadcast_id].terminate()
+				convert2mp4(broadcast_id, broadcastdict[broadcast_id]['filename'])
 				#start new recording
-				URL = broadcastdict[user]['HLS_URL']
-				broadcastdict[user]['filename']= usershort + '_on_peri_' + str(time.time())[:10] + '.mkv'
-				broadcastdict[user]['filesize']= 0
-				broadcastdict[user]['time']= time.time()
-				rec_ffmpeg(user, URL, broadcastdict[user]['filename'] )
+				URL = broadcastdict[broadcast_id]['HLS_URL']
+				broadcastdict[broadcast_id]['filename']= broadcastdict[broadcast_id]['user'] + '_on_peri_' + str(time.time())[:10] + '.mkv'
+				broadcastdict[broadcast_id]['filesize']= 0
+				broadcastdict[broadcast_id]['time']= time.time()
+				rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
 	#end recording, delete entry in broadcastdict and convert mkv -> mp4
-	for user in deleteuserbroadcast:
-		p[user].terminate()
-		print ('End recording for: ', user[:-2])
-		if user in broadcastdict:
-			convert2mp4(broadcastdict[user]['filename'])
-			del broadcastdict[user]
+	for broadcast_id in deleteuserbroadcast:
+		p[broadcast_id].terminate()
+		print ('End recording for: ', broadcastdict[broadcast_id]['user'])
+		if broadcast_id in broadcastdict:
+			convert2mp4(broadcast_id, broadcastdict[broadcast_id]['filename'])
+			del broadcastdict[broadcast_id]
 	time.sleep(1)
