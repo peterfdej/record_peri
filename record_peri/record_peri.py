@@ -228,7 +228,6 @@ while True:
 						deleteuserbroadcast.append(broadcast_id)
 	for broadcast_id in broadcastdict:
 		#check if recording is running
-		print ('ffmpeg ', p[broadcast_id].poll())
 		if p[broadcast_id].poll() == 0:
 			broadcastdict[broadcast_id]['state'] = 'ENDED'
 			deleteuserbroadcast.append(broadcast_id)
