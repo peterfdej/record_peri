@@ -209,55 +209,41 @@ while True:
 					broadcastdict[broadcast_id]['time']= time.time()
 					broadcastdict[broadcast_id]['filename']= usershort + '_on_peri_' + str(broadcastdict[broadcast_id]['time'])[:10] + '.mkv'
 					broadcastdict[broadcast_id]['filesize']= 0
-					broadcastdict[broadcast_id]['lastfilesize']= 0
+					broadcastdict[broadcast_id]['lasttime']= 0
 					broadcastdict[broadcast_id]['recording']= 0
 
 					print ('Start recording for: ', usershort)
-					breaker = False
-					for counter in range(1,2):
-						for key in HLSURL1:
-							URL = key + broadcastdict[broadcast_id]['HLS_URL2'] + HLSURL1[key]
-							rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
-							time.sleep(1)
-							if os.path.exists(broadcastdict[broadcast_id]['filename']):
-								print ('Recording started from: ', key, '-', broadcast_id)
-								broadcastdict[broadcast_id]['HLS_URL'] = URL
-								breaker = True
-								break
-							else:
-								p[broadcast_id].terminate()
-						if breaker:
+					for key in HLSURL1:
+						URL = key + broadcastdict[broadcast_id]['HLS_URL2'] + HLSURL1[key]
+						rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
+						time.sleep(1)
+						if os.path.exists(broadcastdict[broadcast_id]['filename']):
+							print ('Recording started from: ', key, '-', broadcast_id)
+							broadcastdict[broadcast_id]['HLS_URL'] = URL
 							break
-						time.sleep(5)
+						else:
+							p[broadcast_id].terminate()
 					if not os.path.exists(broadcastdict[broadcast_id]['filename']):
 						print ('No recording file created for: ', usershort, 'file: ', broadcastdict[broadcast_id]['filename'])
 						deleteuserbroadcast.append(broadcast_id)
 	for broadcast_id in broadcastdict:
-		#check recording file
-		if os.path.exists(broadcastdict[broadcast_id]['filename']) and broadcastdict[broadcast_id]['state'] == 'RUNNING':
-			if broadcastdict[broadcast_id]['filesize'] < file_size(broadcastdict[broadcast_id]['filename']):
-				broadcastdict[broadcast_id]['filesize'] = file_size(broadcastdict[broadcast_id]['filename'])
-				print ('Running ',round(time.time()- broadcastdict[broadcast_id]['time']), 'seconds: ', broadcastdict[broadcast_id]['filename'])
-			elif file_size(broadcastdict[broadcast_id]['filename']) < 307200 or file_size(broadcastdict[broadcast_id]['filename']) == broadcastdict[broadcast_id]['lastfilesize']:
-				#final stop recording when file < 300kB
-				p[broadcast_id].terminate()
-				time.sleep(2)
-				broadcastdict[broadcast_id]['state'] = 'ENDED'
-				deleteuserbroadcast.append(broadcast_id)
-				os.remove(broadcastdict[broadcast_id]['filename'])
-				print ('Delete: ', broadcastdict[broadcast_id]['filename'])
-			else:
-				#ffmpeg is not recording anymore.
-				broadcastdict[broadcast_id]['lastfilesize'] = file_size(broadcastdict[broadcast_id]['filename'])
-				print ('Restart recording for: ', broadcastdict[broadcast_id]['filename'] , ' :stream / record error')
-				p[broadcast_id].terminate()
-				convert2mp4(broadcast_id, broadcastdict[broadcast_id]['filename'])
-				#start new recording
-				URL = broadcastdict[broadcast_id]['HLS_URL']
-				broadcastdict[broadcast_id]['filename']= broadcastdict[broadcast_id]['user'] + '_on_peri_' + str(time.time())[:10] + '.mkv'
-				broadcastdict[broadcast_id]['filesize']= 0
-				broadcastdict[broadcast_id]['time']= time.time()
-				rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
+		#check if recording is running
+		print ('ffmpeg ', p[broadcast_id].poll())
+		if p[broadcast_id].poll() == 0:
+			broadcastdict[broadcast_id]['state'] = 'ENDED'
+			deleteuserbroadcast.append(broadcast_id)
+		else:
+			print ('Running ',round(time.time()- broadcastdict[broadcast_id]['time']), 'seconds: ', broadcastdict[broadcast_id]['filename'])
+			#compare file size every 60 seconds
+			if os.path.exists(broadcastdict[broadcast_id]['filename']) and broadcastdict[broadcast_id]['state'] == 'RUNNING':
+				if broadcastdict[broadcast_id]['filesize'] < file_size(broadcastdict[broadcast_id]['filename']) and (time.time() - broadcastdict[broadcast_id]['lasttime']) > 60:
+					broadcastdict[broadcast_id]['filesize'] = file_size(broadcastdict[broadcast_id]['filename'])
+					broadcastdict[broadcast_id]['lasttime']= time.time()
+				elif file_size(broadcastdict[broadcast_id]['filename']) == broadcastdict[broadcast_id]['filesize'] and (time.time() - broadcastdict[broadcast_id]['lasttime']) > 60:
+					p[broadcast_id].terminate()
+					time.sleep(2)
+					broadcastdict[broadcast_id]['state'] = 'ENDED'
+					deleteuserbroadcast.append(broadcast_id)
 	#end recording, delete entry in broadcastdict and convert mkv -> mp4
 	for broadcast_id in deleteuserbroadcast:
 		p[broadcast_id].terminate()
