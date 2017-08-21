@@ -45,24 +45,9 @@ import json
 import urllib.request, urllib.error
 
 PERISCOPE_URL = 'https://www.pscp.tv/'
+TOKEN_URL = 'https://api.periscope.tv/api/v2/getAccessPublic?token='
 TWITTER_URL = 'https://twitter.com/'
-HLSURL1 = {
-	'https://prod-video-eu-central-1.pscp.tv/':'/live/eu-central-1/playlist.m3u8',
-	'https://prod-video-eu-west-1.pscp.tv/':'/live/eu-west-1/playlist.m3u8',
-	'https://prod-video-ap-northeast-1.pscp.tv/':'/live/ap-northeast-1/playlist.m3u8',
-	'https://prod-video-ap-southeast-1.pscp.tv/':'/live/ap-southeast-1/playlist.m3u8',
-	'https://prod-video-us-west-1.pscp.tv/':'/live/us-west-1/playlist.m3u8',
-	'https://prod-video-us-east-1.pscp.tv/':'/live/us-east-1/hlsproducer.m3u8',
-	'https://prod-video-us-east-1.pscp.tv/':'/live/us-east-1/playlist.m3u8',
-	'https://prod-video-sa-east-1.pscp.tv/':'/live/sa-east-1/playlist.m3u8',
-	'https://prod-video-eu-central-2.pscp.tv/':'/live/eu-central-2/playlist.m3u8',
-	'https://prod-video-eu-west-2.pscp.tv/':'/live/eu-west-2/playlist.m3u8',
-	'https://prod-video-ap-northeast-2.pscp.tv/':'/live/ap-northeast-2/playlist.m3u8',
-	'https://prod-video-ap-southeast-2.pscp.tv/':'/live/ap-southeast-2/playlist.m3u8',
-	'https://prod-video-us-west-2.pscp.tv/':'/live/us-west-2/playlist.m3u8',
-	'https://prod-video-us-east-2.pscp.tv/':'/live/us-east-2/playlist.m3u8',
-	'https://prod-video-sa-east-2.pscp.tv/':'/live/sa-east-2/playlist.m3u8'
-	}
+
 broadcastdict = {}
 deleteuser = []
 p = {}
@@ -139,6 +124,19 @@ def get_twitter_streamURL(user):
 			streamURL = 'nothing'
 	return streamURL
 	
+def get_HLSURL(id):
+	req = urllib.request.Request(TOKEN_URL + str(id))
+	try:
+		response = urllib.request.urlopen(req)
+		r = response.read()
+		soup = BeautifulSoup(r, 'html.parser')
+		data_store = json.loads(str(soup))
+		get_HLSURL = data_store['https_hls_url']
+	except urllib.error.URLError as e:
+		print("URLError: ",e.reason)
+		get_HLSURL = {}
+	return get_HLSURL
+
 def rec_ffmpeg(broadcast_id, input, output):
 	command = [FFMPEG,'-i' , input,'-y','-acodec','mp3','-loglevel','0', output]
 	p[broadcast_id]=subprocess.Popen(command)
@@ -197,14 +195,8 @@ while True:
 				broadcast_id = live_broadcast['id']
 				if broadcast_id not in broadcastdict :
 					print ('New scope of user: ', usershort)
-					HLS_URL_2 = live_broadcast['image_url'][live_broadcast['image_url'].find('.tv/')+ 4:]
-					if 'chunk' in HLS_URL_2:
-						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('chunk') - 1]
-					if 'orig.jpg' in HLS_URL_2:
-						HLS_URL_2 = HLS_URL_2[:HLS_URL_2.find('orig.jpg') - 1]
 					broadcastdict[broadcast_id] = {}
 					broadcastdict[broadcast_id]['user'] = usershort
-					broadcastdict[broadcast_id]['HLS_URL2']= HLS_URL_2
 					broadcastdict[broadcast_id]['state']= 'RUNNING'
 					broadcastdict[broadcast_id]['time']= time.time()
 					broadcastdict[broadcast_id]['filename']= usershort + '_on_peri_' + str(broadcastdict[broadcast_id]['time'])[:10] + '.mkv'
@@ -213,16 +205,14 @@ while True:
 					broadcastdict[broadcast_id]['recording']= 0
 
 					print ('Start recording for: ', usershort)
-					for key in HLSURL1:
-						URL = key + broadcastdict[broadcast_id]['HLS_URL2'] + HLSURL1[key]
-						rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
-						time.sleep(1)
-						if os.path.exists(broadcastdict[broadcast_id]['filename']):
-							print ('Recording started from: ', key, '-', broadcast_id)
-							broadcastdict[broadcast_id]['HLS_URL'] = URL
-							break
-						else:
-							p[broadcast_id].terminate()
+					URL = get_HLSURL(broadcast_id)
+					rec_ffmpeg(broadcast_id, URL, broadcastdict[broadcast_id]['filename'] )
+					time.sleep(1)
+					if os.path.exists(broadcastdict[broadcast_id]['filename']):
+						print ('Recording started for: ', usershort, '-', broadcast_id)
+					else:
+						p[broadcast_id].terminate()
+
 					if not os.path.exists(broadcastdict[broadcast_id]['filename']):
 						print ('No recording file created for: ', usershort, 'file: ', broadcastdict[broadcast_id]['filename'])
 						deleteuserbroadcast.append(broadcast_id)
