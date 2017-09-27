@@ -131,7 +131,10 @@ def get_HLSURL(id):
 		r = response.read()
 		soup = BeautifulSoup(r, 'html.parser')
 		data_store = json.loads(str(soup))
-		get_HLSURL = data_store['https_hls_url']
+		if 'https_hls_url' in data_store:
+			get_HLSURL = data_store['https_hls_url']
+		else:
+			get_HLSURL = {}
 	except urllib.error.URLError as e:
 		print("URLError: ",e.reason)
 		get_HLSURL = {}
